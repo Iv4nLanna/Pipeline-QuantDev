@@ -76,3 +76,23 @@ def test_fetch_data_le_do_cache_sem_rede(tmp_path, monkeypatch):
     )
     assert len(out) >= 24
     assert list(out.columns) == ["open", "high", "low", "close", "volume"]
+
+
+def test_run_layer0_retorna_dict_padronizado(tmp_path, monkeypatch):
+    idx = pd.date_range("2020-01-01", periods=300, freq="1h", tz="UTC")
+    fake = pd.DataFrame(
+        {"open": np.linspace(100, 200, 300), "high": np.linspace(100, 200, 300),
+         "low": np.linspace(100, 200, 300), "close": np.linspace(100, 200, 300),
+         "volume": np.full(300, 5.0)}, index=idx)
+    fake.index.name = "datetime"
+
+    monkeypatch.setattr(layer0, "fetch_data", lambda *a, **k: fake)
+
+    r = layer0.run_layer0(
+        "BTC/USDT", "1h", "2020-01-01", "2020-01-13",
+        ma_period=200, results_dir=str(tmp_path), cache_dir=str(tmp_path),
+    )
+    assert set(r.keys()) == {"camada", "status", "metricas", "motivo", "proximo_passo"}
+    assert r["status"] in {"aprovado", "reprovado", "revisar"}
+    assert r["camada"] == "camada0_dados"
+    assert "distribuicao_regimes" in r["metricas"]

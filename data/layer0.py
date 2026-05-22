@@ -2,8 +2,14 @@ import os
 import time
 
 import ccxt
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.stats import skew, kurtosis
+
+from utils.contract import make_result, save_result
 
 
 def clean_data(df, gap_threshold=0.5):
@@ -80,3 +86,60 @@ def fetch_data(ticker, timeframe, start, end, use_cache=True,
         df.to_parquet(cache_path)
     return df.loc[(df.index >= start_ts) & (df.index <= end_ts),
                   ["open", "high", "low", "close", "volume"]]
+
+
+def _plot_regime(df, ma_period, results_dir):
+    from datetime import datetime
+    os.makedirs(results_dir, exist_ok=True)
+    ma = df["close"].rolling(ma_period).mean()
+    fig, ax = plt.subplots(figsize=(14, 6))
+    ax.plot(df.index, df["close"], lw=0.8, label="close")
+    ax.plot(df.index, ma, lw=1.0, label=f"MA{ma_period}")
+    cores = {"bull": "#c8f7c5", "bear": "#f7c5c5", "lateral": "#eeeeee"}
+    for reg, cor in cores.items():
+        mask = df["regime"] == reg
+        ax.fill_between(df.index, df["close"].min(), df["close"].max(),
+                        where=mask, color=cor, alpha=0.3, step="mid")
+    ax.legend(); ax.set_title("Camada 0 — preço, MA e regime")
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    caminho = os.path.join(results_dir, f"regime_{ts}.png")
+    fig.savefig(caminho, dpi=110, bbox_inches="tight"); plt.close(fig)
+    return caminho
+
+
+def run_layer0(ticker, timeframe, start, end, ma_period=200,
+               results_dir="results", cache_dir="data/cache", exchange_name="binance"):
+    bruto = fetch_data(ticker, timeframe, start, end,
+                       cache_dir=cache_dir, exchange_name=exchange_name)
+    n_bruto = len(bruto)
+    limpo = clean_data(bruto)
+    com_regime = detect_regime(limpo, ma_period=ma_period)
+
+    pct_removido = 0.0 if n_bruto == 0 else round(100 * (n_bruto - len(limpo)) / n_bruto, 3)
+    regimes = com_regime["regime"].dropna()
+    dist = {} if regimes.empty else (regimes.value_counts(normalize=True) * 100).round(2).to_dict()
+    ret = limpo["close"].pct_change().dropna()
+    metricas = {
+        "n_candles": int(len(limpo)),
+        "intervalo": [str(limpo.index.min()), str(limpo.index.max())] if len(limpo) else [],
+        "pct_removido_limpeza": pct_removido,
+        "distribuicao_regimes": dist,
+        "retorno_medio": round(float(ret.mean()), 8) if len(ret) else 0.0,
+        "retorno_std": round(float(ret.std()), 8) if len(ret) else 0.0,
+        "skew": round(float(skew(ret)), 4) if len(ret) > 2 else 0.0,
+        "kurtosis": round(float(kurtosis(ret)), 4) if len(ret) > 2 else 0.0,
+    }
+
+    if len(limpo) >= ma_period:
+        grafico = _plot_regime(com_regime, ma_period, results_dir)
+        metricas["grafico_regime"] = grafico
+        status, motivo = "aprovado", f"{len(limpo)} candles limpos, regimes detectados."
+        proximo = "Avançar para Camada 1 (validação estatística)."
+    else:
+        status = "reprovado"
+        motivo = f"Apenas {len(limpo)} candles após limpeza; mínimo {ma_period}."
+        proximo = "Ampliar intervalo ou revisar fonte de dados."
+
+    resultado = make_result("camada0_dados", status, metricas, motivo, proximo)
+    save_result(resultado, results_dir=results_dir)
+    return resultado
