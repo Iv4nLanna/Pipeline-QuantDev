@@ -49,3 +49,30 @@ def test_detect_regime_adiciona_coluna_e_nan_no_aquecimento():
     out = detect_regime(df, ma_period=200)
     assert "regime" in out.columns
     assert out["regime"].iloc[:199].isna().all()
+
+
+from data import layer0
+
+
+def test_fetch_data_le_do_cache_sem_rede(tmp_path, monkeypatch):
+    # prepara um parquet de cache cobrindo o intervalo pedido
+    idx = pd.date_range("2020-01-01", periods=48, freq="1h", tz="UTC")
+    cache_df = pd.DataFrame(
+        {"open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1.0}, index=idx
+    )
+    cache_df.index.name = "datetime"
+    cache_path = tmp_path / "btcusdt_1h.parquet"
+    cache_df.to_parquet(cache_path)
+
+    # se _download_ccxt for chamado, o teste falha (não deve haver rede)
+    def _boom(*a, **k):
+        raise AssertionError("não deveria baixar da rede quando o cache cobre o intervalo")
+
+    monkeypatch.setattr(layer0, "_download_ccxt", _boom)
+
+    out = layer0.fetch_data(
+        "BTC/USDT", "1h", "2020-01-01", "2020-01-02",
+        use_cache=True, cache_dir=str(tmp_path),
+    )
+    assert len(out) >= 24
+    assert list(out.columns) == ["open", "high", "low", "close", "volume"]
