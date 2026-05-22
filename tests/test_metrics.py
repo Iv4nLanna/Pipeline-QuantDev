@@ -21,3 +21,17 @@ def test_bar_returns_short():
     r = bar_returns(signals, close)
     assert r[0] == 0.0
     assert abs(r[1] - (100 / 90 - 1)) < 1e-9
+
+
+from validation.metrics import profit_factor
+
+
+def test_profit_factor_valor_exato():
+    r = np.array([0.1, -0.05, 0.2, -0.05])
+    # pos = 0.3 ; neg = -0.1 ; PF = 3.0
+    assert abs(profit_factor(r) - 3.0) < 1e-9
+
+
+def test_profit_factor_sem_perdas_e_sem_ganhos():
+    assert profit_factor(np.array([0.1, 0.2])) == float("inf")
+    assert profit_factor(np.array([-0.1, -0.2])) == 0.0

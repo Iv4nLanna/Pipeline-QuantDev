@@ -19,3 +19,12 @@ def bar_returns(signals, close):
     ret[pos == 1] = long_ret[pos == 1]
     ret[pos == -1] = short_ret[pos == -1]
     return ret.fillna(0.0).to_numpy()
+
+
+def profit_factor(returns):
+    returns = np.asarray(returns, dtype=float)
+    pos = returns[returns > 0].sum()
+    neg = returns[returns < 0].sum()
+    if neg == 0:
+        return float("inf") if pos > 0 else 0.0
+    return float(pos / abs(neg))
