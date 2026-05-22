@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 
@@ -11,15 +12,24 @@ from scipy.stats import skew, kurtosis
 
 from utils.contract import make_result, save_result
 
+logger = logging.getLogger(__name__)
+
 
 def clean_data(df, gap_threshold=0.5):
     if df.empty or "close" not in df.columns:
         raise ValueError("clean_data requer DataFrame não-vazio com coluna 'close'")
+    n0 = len(df)
     out = df[~df.index.duplicated(keep="first")].copy()
     out = out.sort_index()
+    n_after_dedup = len(out)
+    logger.info("clean_data: %d linha(s) removida(s) por índice duplicado", n0 - n_after_dedup)
     out = out[out["volume"] > 0]
+    n_after_vol = len(out)
+    logger.info("clean_data: %d linha(s) removida(s) por volume zero/negativo", n_after_dedup - n_after_vol)
     ret = out["close"].pct_change().abs()
     out = out[(ret <= gap_threshold) | ret.isna()]
+    n_after_gap = len(out)
+    logger.info("clean_data: %d linha(s) removida(s) por gap anômalo (threshold=%.4f)", n_after_vol - n_after_gap, gap_threshold)
     return out
 
 
