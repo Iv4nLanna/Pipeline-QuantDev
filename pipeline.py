@@ -7,7 +7,7 @@ from data.layer0 import run_layer0
 def run_pipeline():
     resultado = run_layer0(
         config.TICKER, config.TIMEFRAME, config.START, config.END,
-        ma_period=config.REGIME_MA_PERIOD,
+        ma_period=config.REGIME_MA_PERIOD, gap_threshold=config.GAP_THRESHOLD,
         results_dir=config.RESULTS_DIR, cache_dir=config.CACHE_DIR,
         exchange_name=config.EXCHANGE,
     )

@@ -107,12 +107,12 @@ def _plot_regime(df, ma_period, results_dir):
     return caminho
 
 
-def run_layer0(ticker, timeframe, start, end, ma_period=200,
+def run_layer0(ticker, timeframe, start, end, ma_period=200, gap_threshold=0.5,
                results_dir="results", cache_dir="data/cache", exchange_name="binance"):
     bruto = fetch_data(ticker, timeframe, start, end,
                        cache_dir=cache_dir, exchange_name=exchange_name)
     n_bruto = len(bruto)
-    limpo = clean_data(bruto)
+    limpo = clean_data(bruto, gap_threshold=gap_threshold)
     com_regime = detect_regime(limpo, ma_period=ma_period)
 
     pct_removido = 0.0 if n_bruto == 0 else round(100 * (n_bruto - len(limpo)) / n_bruto, 3)
