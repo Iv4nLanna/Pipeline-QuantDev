@@ -53,7 +53,7 @@ def _download_ccxt(ticker, timeframe, start_ms, end_ms, exchange_name="binance")
         linhas.extend(lote)
         since = lote[-1][0] + tf_ms
         if len(lote) < 1000:
-            continue
+            break
     df = pd.DataFrame(linhas, columns=["ts", "open", "high", "low", "close", "volume"])
     df = df.drop_duplicates("ts")
     df["datetime"] = pd.to_datetime(df["ts"], unit="ms", utc=True)
