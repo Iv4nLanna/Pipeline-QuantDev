@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 import numpy as np
 from data.layer0 import clean_data
@@ -96,3 +97,17 @@ def test_run_layer0_retorna_dict_padronizado(tmp_path, monkeypatch):
     assert r["status"] in {"aprovado", "reprovado", "revisar"}
     assert r["camada"] == "camada0_dados"
     assert "distribuicao_regimes" in r["metricas"]
+
+
+@pytest.mark.network
+def test_fetch_data_integracao_binance(tmp_path):
+    df = layer0.fetch_data(
+        "BTC/USDT", "1h", "2021-01-01", "2021-01-03",
+        use_cache=False, cache_dir=str(tmp_path),
+    )
+    assert not df.empty, "fetch_data deve retornar DataFrame não-vazio"
+    assert list(df.columns) == ["open", "high", "low", "close", "volume"]
+    assert df.index.tz is not None, "índice deve ser tz-aware (UTC)"
+    assert df.index.is_monotonic_increasing, "índice deve ser monotônico crescente"
+    # 2 dias de candles 1h: esperado ~48; aceita >= 40 (margem para fins de período)
+    assert len(df) >= 40, f"esperado >= 40 candles; obteve {len(df)}"
