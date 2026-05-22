@@ -26,3 +26,26 @@ def test_clean_data_remove_gap_anomalo():
     df = _df(idx, close=[100, 200, 201], volume=[5, 5, 5])
     out = clean_data(df, gap_threshold=0.5)
     assert 200 not in out["close"].values
+
+
+from data.layer0 import detect_regime
+
+
+def test_detect_regime_classifica_tendencias():
+    n = 250
+    idx = pd.date_range("2020-01-01", periods=n, freq="1h")
+    subida = pd.DataFrame({"close": np.linspace(100, 300, n)}, index=idx)
+    out_bull = detect_regime(subida, ma_period=200)
+    assert (out_bull["regime"].dropna() == "bull").mean() > 0.8
+
+    descida = pd.DataFrame({"close": np.linspace(300, 100, n)}, index=idx)
+    out_bear = detect_regime(descida, ma_period=200)
+    assert (out_bear["regime"].dropna() == "bear").mean() > 0.8
+
+
+def test_detect_regime_adiciona_coluna_e_nan_no_aquecimento():
+    idx = pd.date_range("2020-01-01", periods=250, freq="1h")
+    df = pd.DataFrame({"close": np.linspace(100, 300, 250)}, index=idx)
+    out = detect_regime(df, ma_period=200)
+    assert "regime" in out.columns
+    assert out["regime"].iloc[:199].isna().all()
