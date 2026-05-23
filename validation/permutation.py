@@ -5,20 +5,22 @@ import pandas as pd
 def _permute_single(df, perm_idx, start_index):
     """Aplica um vetor de permutação a um único DataFrame.
 
-    perm_idx tem comprimento (n-1) - start_index e reordena os log-retornos
-    de índice >= start_index. Os primeiros `start_index` log-retornos ficam
-    intactos, o que preserva close[0..start_index] exatamente.
+    Mantém close[0..start_index] exatamente igual ao original (sem round-trip
+    log→exp), aplicando os log-retornos embaralhados só a partir de start_index.
+    perm_idx tem comprimento (n-1) - start_index.
     """
-    log_close = np.log(df["close"].to_numpy())
-    r = np.diff(log_close)                                # len n-1
-    r_head = r[:start_index]
-    r_tail_perm = r[start_index:][perm_idx]
-    r_final = np.concatenate([r_head, r_tail_perm])
+    close_orig = df["close"].to_numpy()
     n = len(df)
     close_perm = np.empty(n)
-    close_perm[0] = df["close"].iloc[0]
-    close_perm[1:] = close_perm[0] * np.exp(np.cumsum(r_final))
-    multiplier = close_perm / df["close"].to_numpy()
+    close_perm[:start_index + 1] = close_orig[:start_index + 1]
+    if start_index < n - 1:
+        log_close = np.log(close_orig)
+        r_tail = np.diff(log_close)[start_index:]
+        r_tail_perm = r_tail[perm_idx]
+        close_perm[start_index + 1:] = (
+            close_perm[start_index] * np.exp(np.cumsum(r_tail_perm))
+        )
+    multiplier = close_perm / close_orig
     out = df.copy()
     out["open"] = df["open"].to_numpy() * multiplier
     out["high"] = df["high"].to_numpy() * multiplier

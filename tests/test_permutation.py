@@ -49,6 +49,24 @@ def test_get_permutation_reprodutivel_com_seed():
     assert not a["close"].equals(c["close"])
 
 
+def test_get_permutation_start_index_preserva_cabecalho():
+    df = _ar1(n=500)
+    perm = get_permutation(df, start_index=100, seed=11)
+    # close[0..100] inclusive intacto: r_head = r[:100], cumsum até 100 idêntica
+    np.testing.assert_array_equal(perm["close"].iloc[:101].values,
+                                  df["close"].iloc[:101].values)
+    assert not np.array_equal(perm["close"].iloc[101:].values,
+                              df["close"].iloc[101:].values)
+
+
+def test_get_permutation_start_index_invalido_levanta():
+    df = _ar1(n=50)
+    with pytest.raises(ValueError):
+        get_permutation(df, start_index=49)   # n-1; cauda < 2 elementos
+    with pytest.raises(ValueError):
+        get_permutation(df, start_index=-1)
+
+
 def test_get_permutation_preserva_ohlc_via_multiplier():
     df = _ar1(n=500)
     perm = get_permutation(df, seed=3)
