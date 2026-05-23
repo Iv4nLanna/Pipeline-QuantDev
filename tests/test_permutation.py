@@ -77,3 +77,35 @@ def test_get_permutation_preserva_ohlc_via_multiplier():
     np.testing.assert_allclose(perm["low"] / perm["close"],
                                df["low"] / df["close"], rtol=1e-9)
     np.testing.assert_array_equal(perm["volume"].values, df["volume"].values)
+
+
+def test_get_permutation_multi_df_mesmo_perm_idx():
+    df1 = _ar1(n=300, seed=1)
+    df2 = _ar1(n=300, seed=2)
+    df2.index = df1.index
+    p1, p2 = get_permutation([df1, df2], seed=5)
+    # mesmo perm_idx aplicado: o conjunto de pares (r1[i], r2[i]) é preservado
+    # (ordenação lexicográfica + allclose para tolerar erro do round-trip log/exp)
+    pares_orig = np.column_stack([
+        np.diff(np.log(df1["close"].to_numpy())),
+        np.diff(np.log(df2["close"].to_numpy())),
+    ])
+    pares_perm = np.column_stack([
+        np.diff(np.log(p1["close"].to_numpy())),
+        np.diff(np.log(p2["close"].to_numpy())),
+    ])
+    pares_orig = pares_orig[np.lexsort((pares_orig[:, 1], pares_orig[:, 0]))]
+    pares_perm = pares_perm[np.lexsort((pares_perm[:, 1], pares_perm[:, 0]))]
+    np.testing.assert_allclose(pares_perm, pares_orig, atol=1e-10)
+
+
+def test_get_permutation_multi_df_indices_divergentes_levanta():
+    df1 = _ar1(n=300)
+    df2 = _ar1(n=200)
+    with pytest.raises(ValueError):
+        get_permutation([df1, df2], seed=0)
+
+
+def test_get_permutation_dfs_vazio_levanta():
+    with pytest.raises(ValueError):
+        get_permutation([], seed=0)
