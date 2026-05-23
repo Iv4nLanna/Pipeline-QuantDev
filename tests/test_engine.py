@@ -8,7 +8,8 @@ from strategies.donchian import donchian
 def _trend_df(n=80):
     p = pd.Series(np.linspace(100, 200, n))
     idx = pd.date_range("2020-01-01", periods=n, freq="1h")
-    return pd.DataFrame({"open": p, "high": p, "low": p, "close": p, "volume": 1.0}, index=idx)
+    arr = p.values
+    return pd.DataFrame({"open": arr, "high": arr, "low": arr, "close": arr, "volume": 1.0}, index=idx)
 
 
 def test_evaluate_grid_shape_e_colunas():
@@ -24,3 +25,13 @@ def test_evaluate_grid_shape_e_colunas():
 def test_evaluate_grid_param_grid_vazio():
     with pytest.raises(ValueError):
         evaluate_grid(donchian, _trend_df(), {})
+
+
+def test_evaluate_grid_pf_consistente_com_metrics():
+    from validation.metrics import bar_returns, profit_factor
+
+    df = _trend_df()
+    out = evaluate_grid(donchian, df, {"entry_lookback": [3], "exit_lookback": [2]})
+    sig = donchian(df, entry_lookback=3, exit_lookback=2)
+    pf_esperado = profit_factor(bar_returns(sig, df["close"]))
+    assert out["profit_factor"].iloc[0] == pf_esperado
