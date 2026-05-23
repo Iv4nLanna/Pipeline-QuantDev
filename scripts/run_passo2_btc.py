@@ -98,9 +98,14 @@ def main():
     print(f">> Passo 2: {n_perms} permutações em {n_workers} workers (seed_base=0)...")
 
     t2 = time.time()
-    with mp.Pool(processes=n_workers,
-                 initializer=_worker_init,
-                 initargs=(df, param_grid, strategy_name)) as pool:
+    # spawn em vez de fork: o fork enrosca numpy._dtype._legacy em Python 3.14
+    # quando o worker chama pd.Series.diff() — bug de import lazy não resolvido
+    # em workers forkados. Spawn re-importa tudo, paga overhead único na criação
+    # do worker mas funciona em qualquer estratégia.
+    ctx = mp.get_context("spawn")
+    with ctx.Pool(processes=n_workers,
+                  initializer=_worker_init,
+                  initargs=(df, param_grid, strategy_name)) as pool:
         pf_perm = np.array(pool.map(_worker_pf_for_seed, seeds), dtype=float)
     print(f">> Passo 2 [{time.time()-t2:.1f}s]")
 
