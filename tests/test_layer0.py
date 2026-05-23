@@ -99,6 +99,20 @@ def test_run_layer0_retorna_dict_padronizado(tmp_path, monkeypatch):
     assert "distribuicao_regimes" in r["metricas"]
 
 
+def test_load_clean_ohlc_reusa_fetch_e_clean(tmp_path, monkeypatch):
+    idx = pd.date_range("2020-01-01", periods=5, freq="1h", tz="UTC")
+    raw = pd.DataFrame(
+        {"open": 1.0, "high": 1.0, "low": 1.0, "close": [1.0, 1.0, 1.0, 1.0, 1.0],
+         "volume": [1.0, 1.0, 0.0, 1.0, 1.0]},
+        index=idx,
+    )
+    monkeypatch.setattr(layer0, "fetch_data", lambda *a, **k: raw)
+    out = layer0.load_clean_ohlc("BTC/USDT", "1h", "2020-01-01", "2020-01-02",
+                                 cache_dir=str(tmp_path))
+    assert (out["volume"] > 0).all()
+    assert list(out.columns) == ["open", "high", "low", "close", "volume"]
+
+
 @pytest.mark.network
 def test_fetch_data_integracao_binance(tmp_path):
     df = layer0.fetch_data(

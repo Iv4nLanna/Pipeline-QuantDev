@@ -153,3 +153,11 @@ def run_layer0(ticker, timeframe, start, end, ma_period=200, gap_threshold=0.5,
     resultado = make_result("camada0_dados", status, metricas, motivo, proximo)
     save_result(resultado, results_dir=results_dir)
     return resultado
+
+
+def load_clean_ohlc(ticker, timeframe, start, end, gap_threshold=0.5,
+                    use_cache=True, cache_dir="data/cache", exchange_name="binance"):
+    """Reusa fetch_data + clean_data e devolve o DataFrame OHLCV limpo para a Camada 1."""
+    bruto = fetch_data(ticker, timeframe, start, end, use_cache=use_cache,
+                       cache_dir=cache_dir, exchange_name=exchange_name)
+    return clean_data(bruto, gap_threshold=gap_threshold)
