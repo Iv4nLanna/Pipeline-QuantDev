@@ -17,7 +17,17 @@
 | # | Estratégia | param_grid | best_param | pf_real | p_value | n_perm | status | data |
 |---|------------|------------|------------|---------|---------|--------|--------|------|
 | 1 | `donchian` (puro) | `entry∈{20,30,40,60,80,100} × exit∈{10,20,30,40}` (24 combos) | `entry=100, exit=10` | 1.0419 | 0.2575 | 500 | reprovado | 2026-05-23 |
-| 2 | `donchian_filtered_regime` (filtro MA200 bull/bear) | mesma grade Donchian | _pendente_ | _pendente_ | _pendente_ | 500 | _pendente_ | 2026-05-23 |
+| 2 | `donchian_filtered_regime` (filtro MA200 bull/bear) | mesma grade Donchian | `entry=100, exit=10` | 1.0583 | 0.1158 | 500 | reprovado | 2026-05-23 |
+
+## Observações por estratégia
+
+### #1 donchian puro
+- `pf_real` no percentil 74 da distribuição nula. 128/500 permutações atingem PF ≥ 1.042.
+
+### #2 donchian_filtered_regime
+- O filtro **melhorou** o sinal: PF subiu 1.042 → 1.058 (+1.6pp), p_value caiu 0.26 → 0.12 (×2.2 mais raro).
+- Mas ainda 57/500 permutações da própria estratégia filtrada atingem PF ≥ 1.058 sob a nula.
+- Conclusão: a hipótese econômica "breakout só funciona em tendência" tem **direção certa** (o filtro ajuda), mas a magnitude da melhoria é insuficiente para distinguir o sinal do efeito de data mining sobre os 24 parâmetros do grid.
 
 ## Threshold Bonferroni acumulado
 
