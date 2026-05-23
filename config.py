@@ -19,7 +19,6 @@ DONCHIAN_PARAM_GRID = {
     "entry_lookback": [20, 30, 40, 60, 80, 100],
     "exit_lookback": [10, 20, 30, 40],
 }
-PF_MIN = 1.05                # profit factor mínimo para aprovar in-sample
 REDFLAG_WIN_RATE = 0.95      # win_rate acima disto = overfit suspeito
 REDFLAG_MIN_TRADES = 30      # menos trades que isto = sem poder estatístico
 REDFLAG_MAX_PF = 5.0         # PF acima disto = implausível em dados reais

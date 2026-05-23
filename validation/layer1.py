@@ -62,14 +62,16 @@ def in_sample_excellence(strategy_func, df, param_grid, results_dir="results"):
     if pf > config.REDFLAG_MAX_PF:
         red_flags.append(f"profit_factor {pf} > {config.REDFLAG_MAX_PF}")
 
-    if pf > config.PF_MIN and not red_flags:
+    # Passo 1 é qualitativo: aprova se não houver red-flags de overfit ou problema
+    # técnico. A magnitude do PF não é critério aqui — significância estatística
+    # é o trabalho do Passo 2 (permutation_test_is).
+    if not red_flags:
         status = "aprovado"
         motivo = f"PF={pf:.3f} com {n_trades} trades; sem red-flags."
         proximo = "Avançar para o Passo 2 (permutation_test_is)."
     else:
         status = "reprovado"
-        motivo = (f"PF={pf:.3f} <= {config.PF_MIN}." if pf <= config.PF_MIN
-                  else "Red-flags de overfit: " + "; ".join(red_flags))
+        motivo = "Red-flags: " + "; ".join(red_flags)
         proximo = "Revisar estratégia/param_grid; não avançar."
 
     resultado = make_result("in_sample_excellence", status, metricas, motivo, proximo)

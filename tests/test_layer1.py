@@ -29,11 +29,30 @@ def test_in_sample_excellence_aprovado(tmp_path, monkeypatch):
     assert os.path.exists(r["metricas"]["heatmap"])
 
 
-def test_in_sample_excellence_reprovado_pf_baixo(tmp_path):
+def test_in_sample_excellence_reprovado_red_flag_min_trades(tmp_path):
+    # poucas barras -> 1 trade só -> red-flag de poder estatístico (n_trades < 30)
     def fake(df, a, b):
         return pd.Series(1.0, index=df.index)
 
-    df = _df([100, 99, 98, 97])
+    df = _df([100, 101, 102, 103, 104])
     grid = {"a": [1, 2], "b": [3, 4]}
     r = in_sample_excellence(fake, df, grid, results_dir=str(tmp_path))
     assert r["status"] == "reprovado"
+    assert "n_trades" in r["motivo"]
+
+
+def test_in_sample_excellence_aprova_pf_baixo_sem_red_flags(tmp_path, monkeypatch):
+    """Passo 1 não rejeita por magnitude de PF: PF < 1.0 sem red-flags = aprovado.
+    Significância é tarefa do Passo 2 (permutation_test_is).
+    """
+    monkeypatch.setattr(config, "REDFLAG_MIN_TRADES", 1)
+
+    # estratégia perdedora -> PF < 1.0 mas sem red-flag de overfit
+    def fake_loser(df, a, b):
+        return pd.Series(1.0, index=df.index)
+
+    df = _df([100, 99, 98, 97])  # cai -> PF < 1.0
+    grid = {"a": [1, 2], "b": [3, 4]}
+    r = in_sample_excellence(fake_loser, df, grid, results_dir=str(tmp_path))
+    assert r["status"] == "aprovado"
+    assert r["metricas"]["profit_factor"] < 1.0
